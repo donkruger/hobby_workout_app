@@ -1,5 +1,6 @@
 streamlit
 pandas
-beepy
+simpleaudio==1.0.4
+beepy==1.0.7
 plotly
 google-generativeai # Added for Gemini API
