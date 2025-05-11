@@ -1,0 +1,186 @@
+/* ui/style.css */
+@import url("https://fonts.googleapis.com/css2?family=Questrial&family=Open+Sans:wght@300;400;600;700&display=swap");
+
+/* ------------------------------------------------------------------
+      GLOBAL FONT STYLES
+      ------------------------------------------------------------------ */
+body,
+html,
+.stApp,
+.stWidget,
+.stMarkdown p,
+.stChatInput,
+.stTextArea,
+.stTextInput,
+.stButton > button,
+.stSelectbox div[data-baseweb="select"] > div,
+.stSlider div[data-baseweb="slider"] {
+  font-family: "Open Sans", sans-serif !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.stApp h1,
+.stApp h2,
+.stApp h3,
+.custom-title {
+  font-family: "Questrial", sans-serif !important;
+}
+
+/* ------------------------------------------------------------------
+      ANIMATED TEXT GRADIENTS
+      ------------------------------------------------------------------ */
+@keyframes animatedGradientEffect {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animated-gradient-text-base {
+  font-family: "Questrial", sans-serif !important;
+  font-weight: bold;
+  text-align: center;
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -moz-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  -moz-text-fill-color: transparent;
+  animation: animatedGradientEffect 6s ease infinite;
+}
+
+.timer-numbers-display {
+  font-size: 7rem;
+  line-height: 1.2;
+  padding: 10px 0;
+}
+
+.phase-header-gradient {
+  font-size: 3rem;
+  line-height: 1.3;
+  padding: 5px 0;
+  margin-bottom: 15px;
+}
+
+/* Gradient colour palettes for text */
+.workout-gradient-colors {
+  background-image: linear-gradient(
+    90deg,
+    #ff8a80,
+    /* Lighter warm red */ #ff4b4b,
+    /* Main warm red */ #f44336,
+    /* Darker red */ #ff6f00,
+    /* Orange-red */ #ff4b4b,
+    /* Loop back */ #ff8a80
+  );
+}
+
+.rest-gradient-colors {
+  background-image: linear-gradient(
+    90deg,
+    #80deea,
+    /* Lighter teal */ #10ddc2,
+    /* Main teal */ #00acc1,
+    /* Darker teal */ #26c6da,
+    /* Bright blue */ #10ddc2,
+    /* Loop back */ #80deea
+  );
+}
+
+.default-gradient-colors {
+  background-image: linear-gradient(90deg, #cccccc, #aaaaaa, #cccccc);
+}
+
+/* ------------------------------------------------------------------
+      CUSTOM HTML PROGRESS BAR STYLING
+      ------------------------------------------------------------------ */
+.custom-progress-wrapper {
+  width: 100%;
+  padding: 10px 0 20px 0; /* Adjusted padding */
+}
+
+.custom-progress-bg {
+  width: 100%;
+  height: 22px; /* Slightly taller */
+  background-color: #e9ecef; /* Light grey track background */
+  border-radius: 11px; /* Corresponds to half of height */
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15); /* Softer inner shadow */
+}
+
+/* Common properties for custom bar fills */
+.custom-bar-fill {
+  height: 100%;
+  border-radius: 11px; /* Ensure fill is also rounded */
+  transition: width 0.3s ease-out; /* Smooth transition for width change */
+  /* Animation for the gradient itself within the fill */
+  background-size: 300% 100%; /* Wider for smoother pan */
+  animation: animatedGradientEffect 8s ease infinite; /* Slower pan for progress bar */
+}
+
+.custom-bar-workout {
+  /* Extends .custom-bar-fill */
+  background-image: linear-gradient(
+    /* Warm gradient for workout */ 90deg,
+    #ff8a80,
+    #ff4b4b,
+    #f44336,
+    #ff6f00,
+    #ff4b4b,
+    #ff8a80
+  );
+}
+
+.custom-bar-rest {
+  /* Extends .custom-bar-fill */
+  background-image: linear-gradient(
+    /* Cool gradient for rest */ 90deg,
+    #80deea,
+    #10ddc2,
+    #00acc1,
+    #26c6da,
+    #10ddc2,
+    #80deea
+  );
+}
+
+/* Fallback if a default bar class is needed */
+.custom-bar-default {
+  /* Extends .custom-bar-fill */
+  background-image: linear-gradient(90deg, #cccccc, #aaaaaa, #cccccc);
+}
+
+/* ------------------------------------------------------------------
+      BUTTON ROW STYLING (if you have it)
+      ------------------------------------------------------------------ */
+.button-row {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.button-row .stColumn {
+  flex: 1 !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+.button-row .stButton > button {
+  width: 100%;
+  height: 48px;
+  font-size: 1.05rem;
+  border-radius: 8px;
+}
+
+/* ------------------------------------------------------------------
+      END OF FILE
+      ------------------------------------------------------------------ */

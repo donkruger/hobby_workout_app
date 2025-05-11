@@ -1,0 +1,14 @@
+# Byte‑compiled / cached files
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual‑envs
+venv/
+.env/
+
+# Streamlit secrets & config
+.streamlit/secrets.toml
+
+# OS metadata
+.DS_Store

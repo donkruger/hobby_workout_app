@@ -1,0 +1,5 @@
+streamlit
+pandas
+beepy
+plotly
+google-generativeai # Added for Gemini API
