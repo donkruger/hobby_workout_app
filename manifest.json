@@ -1,0 +1,20 @@
+{
+  "short_name": "WorkoutApp",
+  "name": "Streamlit Workout Timer App",
+  "icons": [
+    {
+      "src": "icons/icon-192x192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "icons/icon-512x512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#10ddc2",
+  "background_color": "#2F3C4F"
+}

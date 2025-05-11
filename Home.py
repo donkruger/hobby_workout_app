@@ -18,6 +18,30 @@ st.set_page_config(
     initial_sidebar_state="collapsed" # Changed to "collapsed"
 )
 
+
+# For custom icon in PWA
+
+st.markdown(
+    '<link rel="manifest" href="/manifest.json">',
+    unsafe_allow_html=True
+)
+st.markdown(
+    """
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').then(registration => {
+          console.log('SW registered: ', registration);
+        }).catch(registrationError => {
+          console.log('SW registration failed: ', registrationError);
+        });
+      });
+    }
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
 # --- Function to Load Custom CSS ---
 def load_css(file_path):
     if os.path.exists(file_path):
