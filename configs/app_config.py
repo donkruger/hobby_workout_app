@@ -17,19 +17,20 @@ PHASE_WORKOUT = "WORKOUT"
 PHASE_REST = "REST"
 PHASE_COMPLETED = "COMPLETED" # Optional: If you want a finite number of sets
 
-# --- Sound Configuration ---
-BEEPY_SOUND_OPTIONS = [
+# --- Sound Configuration (Using JS Web Audio) ---
+# These names correspond to functions/types in the JS code.
+JS_SOUND_OPTIONS = [
     "None",
-    "coin",
-    "error",
-    "ping",
-    "ready",
-    "success",
-    "message",
+    "Beep_High",
+    "Beep_Low",
+    "Double_Beep",
+    "Success",
+    "Error",
 ]
-DEFAULT_WORKOUT_START_SOUND = "ping"
-DEFAULT_REST_START_SOUND = "ping"
-DEFAULT_SESSION_START_SOUND = "ping"
+DEFAULT_WORKOUT_START_SOUND = "Beep_High"
+DEFAULT_REST_START_SOUND = "Beep_Low"
+DEFAULT_SESSION_START_SOUND = "Success"
+
 
 # --- Insights Chart Configuration ---
 CHART_TYPE_BAR = "Bar Chart"
@@ -43,4 +44,4 @@ DEFAULT_INSIGHTS_CHART_TYPE = CHART_TYPE_DOUGHNUT
 # GEMINI_API_KEY = "YOUR_ACTUAL_API_KEY"
 # And access it in your code via st.secrets["GEMINI_API_KEY"]
 # For this example, the key will be handled in the component using it, with a warning.
-GEMINI_API_MODEL_NAME = "gemini-2.0-flash" # Using a recommended model
+GEMINI_API_MODEL_NAME = "gemini-1.5-flash" # Using a recommended model

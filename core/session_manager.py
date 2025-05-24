@@ -2,14 +2,20 @@
 import streamlit as st
 from configs.app_config import PHASE_WORKOUT, PHASE_REST
 from utils.helpers import format_time
-import beepy as bp
+# Removed beepy import
 
-def _play_sound(sound_name_or_id):
+def _play_sound_js(sound_name_or_id):
+    """ Sets a session_state variable to trigger JS sound playback. """
     if sound_name_or_id and sound_name_or_id.lower() != "none":
-        try:
-            bp.beep(sound=sound_name_or_id)
-        except Exception as e:
-            print(f"Info: Could not play sound '{sound_name_or_id}' with beepy - {e}")
+        # We set this value, and Home.py will pick it up and trigger JS.
+        # We add a counter to ensure it changes even if the sound name is the same,
+        # forcing a re-trigger if needed, though popping should be enough.
+        st.session_state.sound_to_play = {
+            "name": sound_name_or_id,
+            "trigger": st.session_state.get("sound_trigger_count", 0) + 1
+        }
+        st.session_state.sound_trigger_count = st.session_state.get("sound_trigger_count", 0) + 1
+
 
 class WorkoutSession:
     def __init__(self):
@@ -26,22 +32,22 @@ class WorkoutSession:
     def start_session(self):
         if not st.session_state.get('timer_running', False):
             st.session_state.timer_running = True
-            
+
             if not st.session_state.get('session_stats_initialized_for_run', False):
                 st.session_state.accumulated_workout_seconds = 0
                 st.session_state.accumulated_rest_seconds = 0
                 st.session_state.completed_rounds = 0
                 st.session_state.current_exercise_index = 0 # Reset exercise index for a new session
                 st.session_state.session_stats_initialized_for_run = True
-                _play_sound(st.session_state.get('sound_on_session_start'))
+                _play_sound_js(st.session_state.get('sound_on_session_start')) # Use JS sound
 
             if st.session_state.current_phase == PHASE_WORKOUT:
                 if st.session_state.current_time == 0 :
-                     st.session_state.current_time = st.session_state.get('workout_duration', 45)
+                        st.session_state.current_time = st.session_state.get('workout_duration', 45)
             elif st.session_state.current_phase == PHASE_REST:
                 if st.session_state.current_time == 0:
-                    st.session_state.current_time = st.session_state.get('rest_duration', 15)
-            else: 
+                        st.session_state.current_time = st.session_state.get('rest_duration', 15)
+            else:
                 st.session_state.current_phase = PHASE_WORKOUT
                 st.session_state.current_time = st.session_state.get('workout_duration', 45)
 
@@ -53,7 +59,7 @@ class WorkoutSession:
         st.session_state.accumulated_rest_seconds = 0
         st.session_state.completed_rounds = 0
         st.session_state.current_exercise_index = 0 # Reset exercise index
-        st.session_state.session_stats_initialized_for_run = False 
+        st.session_state.session_stats_initialized_for_run = False
         if not st.session_state.get('timer_running', False):
             st.session_state.current_phase = PHASE_WORKOUT
             st.session_state.current_time = st.session_state.get('workout_duration', 45)
@@ -75,8 +81,8 @@ class WorkoutSession:
                 st.session_state.current_phase = PHASE_REST
                 st.session_state.current_time = st.session_state.rest_duration
                 st.session_state.completed_rounds += 1
-                _play_sound(st.session_state.get('sound_on_rest_start'))
-                
+                _play_sound_js(st.session_state.get('sound_on_rest_start')) # Use JS sound
+
                 # Advance exercise AFTER workout completion (and sound)
                 schedule = st.session_state.get('workout_schedule', [])
                 if schedule: # Only advance if there's a schedule
@@ -86,7 +92,7 @@ class WorkoutSession:
             elif previous_phase == PHASE_REST:
                 st.session_state.current_phase = PHASE_WORKOUT
                 st.session_state.current_time = st.session_state.workout_duration
-                _play_sound(st.session_state.get('sound_on_workout_start'))
+                _play_sound_js(st.session_state.get('sound_on_workout_start')) # Use JS sound
                 # Current exercise for this new workout phase is already set by the end of the previous workout
 
     # --- Exercise Schedule Getters ---
@@ -122,7 +128,7 @@ class WorkoutSession:
 
     def get_progress_value(self) -> float:
         current_time = st.session_state.get('current_time', 0)
-        total_duration = 1 
+        total_duration = 1
         if st.session_state.get('current_phase') == PHASE_WORKOUT:
             total_duration = st.session_state.get('workout_duration', 1)
         elif st.session_state.get('current_phase') == PHASE_REST:

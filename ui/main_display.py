@@ -3,6 +3,7 @@ import streamlit as st
 from core.session_manager import WorkoutSession
 from configs.app_config import PHASE_WORKOUT, PHASE_REST
 from data_tracking.visualization import display_workout_insights
+from streamlit_js_eval import streamlit_js_eval # Import
 
 
 def render_main_display(session: WorkoutSession) -> None:
@@ -12,7 +13,8 @@ def render_main_display(session: WorkoutSession) -> None:
     """
     # ---------------------- Title ---------------------------------
     st.markdown(
-        "<h1 style='text-align:center;margin-bottom:10px;'>⏱️ Workout Timer</h1>",
+        # Changed h1 to h3 to reduce font size
+        "<h3 style='text-align:center;margin-bottom:10px;'>⏱️ Workout Timer</h3>",
         unsafe_allow_html=True,
     )
 
@@ -61,19 +63,22 @@ def render_main_display(session: WorkoutSession) -> None:
 
         if current_phase == PHASE_WORKOUT and cur_ex:
             st.markdown(
-                f"<p style='text-align:center;font-size:1.5em;margin-top:-10px;margin-bottom:5px;'>"
+                # Increased font-size from 1.5em to 2.2em
+                f"<p style='text-align:center;font-size:2.2em;margin-top:-10px;margin-bottom:5px;'>"
                 f"Current: <strong>{cur_ex}</strong></p>",
                 unsafe_allow_html=True,
             )
             if next_ex:
                 st.markdown(
-                    f"<p style='text-align:center;font-size:1.1em;color:grey;margin-bottom:15px;'>"
+                    # Increased font-size from 1.1em to 1.6em
+                    f"<p style='text-align:center;font-size:1.6em;color:grey;margin-bottom:15px;'>"
                     f"Next: {next_ex}</p>",
                     unsafe_allow_html=True,
                 )
         elif current_phase == PHASE_REST and next_ex:
             st.markdown(
-                f"<p style='text-align:center;font-size:1.5em;margin-top:-10px;margin-bottom:15px;'>"
+                # Increased font-size from 1.5em to 2.2em
+                f"<p style='text-align:center;font-size:2.2em;margin-top:-10px;margin-bottom:15px;'>"
                 f"Next Up: <strong>{next_ex}</strong></p>",
                 unsafe_allow_html=True,
             )
@@ -97,6 +102,8 @@ def render_main_display(session: WorkoutSession) -> None:
     with col1:
         if st.button("Start", use_container_width=True, key="start_button"):
             session.start_session()
+            # Try to unlock audio context when the user clicks start
+            streamlit_js_eval(js_code="if(typeof window.unlockAudio === 'function') { window.unlockAudio(); }")
             st.rerun()
     with col2:
         if st.button("Stop", use_container_width=True, key="stop_button"):
