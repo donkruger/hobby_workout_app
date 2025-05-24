@@ -3,18 +3,14 @@ import streamlit as st
 import pandas as pd
 from utils.helpers import format_time
 import plotly.graph_objects as go
-from configs.app_config import CHART_TYPE_BAR, CHART_TYPE_DOUGHNUT # Import chart type constants
+from configs.app_config import CHART_TYPE_BAR, CHART_TYPE_DOUGHNUT
 
 def display_workout_insights(session_manager):
-    """
-    Displays key workout statistics and a chart comparing workout vs. rest time.
-    The chart type (bar or doughnut) is selectable via session_state.
-    """
     st.subheader("📊 Workout Insights")
 
     rounds = session_manager.get_completed_rounds()
     total_workout_secs = session_manager.get_total_workout_time()
-    total_rest_secs = session_manager.get_total_rest_time()
+    total_rest_secs = session_manager.get_total_rest_time() # Includes "Get Ready" time
     total_elapsed_active_secs = session_manager.get_total_elapsed_active_time()
 
     col1, col2 = st.columns(2)
@@ -22,22 +18,19 @@ def display_workout_insights(session_manager):
         st.metric(label="Rounds Completed", value=f"{rounds}")
         st.metric(label="Total Workout Time", value=format_time(total_workout_secs))
     with col2:
-        st.metric(label="Total Rest Time", value=format_time(total_rest_secs))
+        st.metric(label="Total Prep & Rest Time", value=format_time(total_rest_secs)) # Updated label
         st.metric(label="Total Active Time", value=format_time(total_elapsed_active_secs))
 
-    st.markdown("##### Workout vs. Rest Duration")
+    st.markdown("##### Workout vs. Prep/Rest Duration") # Updated label
 
     if total_workout_secs > 0 or total_rest_secs > 0:
-        workout_color_hex = "#ff4b4b" # Main warm color
-        rest_color_hex = "#10ddc2"   # Main cool color
+        workout_color_hex = "#ff4b4b" 
+        rest_color_hex = "#10ddc2"   
 
-        # Data for charts
-        activities = ["Workout Time", "Rest Time"]
+        activities = ["Workout Time", "Prep & Rest Time"] # Updated label
         durations = [total_workout_secs, total_rest_secs]
         colors = [workout_color_hex, rest_color_hex]
 
-        # Filter out zero values to prevent issues with Plotly Pie if one is zero
-        # and to make the chart cleaner.
         valid_indices = [i for i, v in enumerate(durations) if v > 0]
         
         if not valid_indices:
@@ -48,7 +41,6 @@ def display_workout_insights(session_manager):
         filtered_values = [durations[i] for i in valid_indices]
         filtered_colors = [colors[i] for i in valid_indices]
 
-        # Get selected chart type from session state
         selected_chart_type = st.session_state.get('insights_chart_type', CHART_TYPE_DOUGHNUT)
 
         if selected_chart_type == CHART_TYPE_DOUGHNUT:
@@ -60,13 +52,17 @@ def display_workout_insights(session_manager):
                 hoverinfo='label+percent+value',
                 textinfo='label+percent',
                 insidetextorientation='radial',
+                textfont=dict(color='white', size=16), 
                 sort=False
             )])
             fig.update_layout(
                 margin=dict(t=20, b=20, l=20, r=20),
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                height=400
+                height=400,
+                uniformtext_minsize=10,  # New: Set minimum size for text inside slices
+                uniformtext_mode='show'    # New: Try to show text even if it means scaling
+                # paper_bgcolor='rgba(0,0,0,0)' # Ensure background is transparent for Streamlit themes
             )
             st.plotly_chart(fig, use_container_width=True)
         
@@ -88,7 +84,6 @@ def display_workout_insights(session_manager):
     else:
         st.caption("No activity yet to display chart.")
 
-# Placeholder for historical charts
 def render_historical_charts(history_data):
     if not history_data:
         st.write("No historical workout data available to display charts.")
