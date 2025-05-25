@@ -5,11 +5,13 @@ import os
 from streamlit_js_eval import streamlit_js_eval # Import
 
 # Custom modules
-from configs.app_config import PHASE_WORKOUT, PHASE_REST
+from configs.app_config import PHASE_PAUSED # Import PHASE_PAUSED
 from utils.helpers import initialize_session_state_defaults
 from core.session_manager import WorkoutSession
 from ui.sidebar_controls import render_sidebar_controls
 from ui.main_display import render_main_display
+from ai_components.agent_rag_pipeline import get_ai_feedback_for_session # Import AI feedback function
+# from data_tracking.storage import load_workout_history # Keep for future use
 
 # --- Page Configuration (should be the first Streamlit command) ---
 st.set_page_config(
@@ -21,7 +23,6 @@ st.set_page_config(
 
 
 # For custom icon in PWA
-
 st.markdown(
     '<link rel="manifest" href="/manifest.json">',
     unsafe_allow_html=True
@@ -43,53 +44,99 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- JavaScript Sound Engine Injection ---
+# --- JavaScript Sound Engine Injection (MODIFIED) ---
 js_sound_script = """
 <script>
 // Make functions and context global for accessibility
 window.audioCtx = null;
 window.isAudioUnlocked = false;
 
-// Function to initialize/unlock AudioContext (MUST be called via user interaction)
+// Function to initialize/unlock AudioContext
 window.unlockAudio = function() {
-    if (!window.isAudioUnlocked && !window.audioCtx) {
+    // Only proceed if not already unlocked and running
+    if (window.isAudioUnlocked && window.audioCtx && window.audioCtx.state === 'running') {
+        // console.log("[AUDIO DEBUG] Audio Context already unlocked and running.");
+        return;
+    }
+
+    if (!window.audioCtx) {
         try {
             window.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            // Play a silent buffer to "prime" the audio context on some browsers
+            console.log("[AUDIO DEBUG] Audio Context Created.");
+        } catch(e) {
+            console.error("[AUDIO DEBUG] Audio Context could not be created:", e);
+            return; // Exit if creation failed
+        }
+    }
+
+    if (window.audioCtx.state === 'suspended') {
+        console.log("[AUDIO DEBUG] Audio Context is suspended, attempting to resume...");
+        window.audioCtx.resume().then(() => {
+            window.isAudioUnlocked = true;
+            console.log("[AUDIO DEBUG] Audio Context Resumed successfully.");
+            // Play a silent buffer to "prime" the audio context
             const buffer = window.audioCtx.createBuffer(1, 1, 22050);
             const source = window.audioCtx.createBufferSource();
             source.buffer = buffer;
             source.connect(window.audioCtx.destination);
             source.start(0);
-            window.isAudioUnlocked = true;
-            console.log("Audio Context Unlocked/Primed.");
-        } catch(e) {
-            console.error("Audio Context could not be created/unlocked:", e);
-            window.isAudioUnlocked = false; // Ensure it's false on error
-        }
-    } else if (window.audioCtx && window.audioCtx.state === 'suspended') {
-        window.audioCtx.resume().then(() => {
-            window.isAudioUnlocked = true;
-            console.log("Audio Context Resumed.");
-        }).catch(e => console.error("Audio Context resume failed:", e));
+            console.log("[AUDIO DEBUG] Silent buffer played.");
+        }).catch(e => {
+            console.error("[AUDIO DEBUG] Audio Context resume failed:", e);
+            window.isAudioUnlocked = false;
+        });
+    } else if (window.audioCtx.state === 'running') {
+        window.isAudioUnlocked = true;
+        console.log("[AUDIO DEBUG] Audio Context is already running.");
+    } else {
+         console.log(`[AUDIO DEBUG] Audio Context in state: ${window.audioCtx.state}`);
     }
 }
 
-// Function to play sounds using Web Audio API
-window.playJsSound = function(soundType = 'Beep_High', durationMs = 150) {
-    if (!window.audioCtx || !window.isAudioUnlocked) {
-         console.warn("Audio Context not ready. Trying to unlock (might fail if not user-init).");
-         window.unlockAudio(); // Try again, but it might fail here
-         if (!window.isAudioUnlocked) {
-            console.error("Audio remains locked. Cannot play sound:", soundType);
-            return; // Exit if still locked
-         }
-    }
-    // Ensure context is running
-    if (window.audioCtx.state === 'suspended') {
-        window.audioCtx.resume();
+// Function to request permission AND unlock audio (NEW/MODIFIED)
+window.requestSoundPermissionAndUnlock = function() {
+    console.log("[AUDIO DEBUG] requestSoundPermissionAndUnlock called.");
+    // 1. Try unlocking directly first
+    window.unlockAudio();
+
+    // 2. Check if Notification API exists
+    if (!("Notification" in window)) {
+        console.warn("[AUDIO DEBUG] Notification API not supported. Relying on click to unlock.");
+        return;
     }
 
+    // 3. Request Notification Permission
+    Notification.requestPermission().then(perm => {
+        if (perm === 'granted') {
+            console.log('[AUDIO DEBUG] Notification permission granted.');
+            // Try unlocking AGAIN after permission (important!)
+            window.unlockAudio();
+        } else {
+            console.warn('[AUDIO DEBUG] Notification permission denied. Sound might not work.');
+            // Still try unlocking, as the click itself might be enough
+            window.unlockAudio();
+        }
+    }).catch(error => {
+        console.error('[AUDIO DEBUG] Error requesting notification permission:', error);
+        window.unlockAudio(); // Try unlocking even on error
+    });
+}
+
+// Function to play sounds using Web Audio API (MODIFIED for robustness)
+window.playJsSound = function(soundType = 'Beep_High', durationMs = 150) {
+    if (!window.audioCtx || !window.isAudioUnlocked || window.audioCtx.state !== 'running') {
+       console.warn(`[AUDIO DEBUG] Cannot play sound '${soundType}'. Context not ready (State: ${window.audioCtx ? window.audioCtx.state : 'null'}, Unlocked: ${window.isAudioUnlocked}). Needs user interaction/permission.`);
+        // Try a final, gentle unlock attempt - MIGHT NOT WORK but worth a try
+        if (window.audioCtx && window.audioCtx.state === 'suspended') {
+            window.audioCtx.resume();
+        }
+        // If still not running, we must exit to avoid errors.
+        if (!window.audioCtx || window.audioCtx.state !== 'running') {
+            return;
+        }
+    }
+
+    console.log(`[AUDIO DEBUG] Playing sound: ${soundType}`);
     const ctx = window.audioCtx;
     const oscillator = ctx.createOscillator();
     const gainNode = ctx.createGain();
@@ -99,13 +146,14 @@ window.playJsSound = function(soundType = 'Beep_High', durationMs = 150) {
 
     let freq1 = 880; // Default: High A
     let freq2 = 0;   // For double beep
+    let oscType = 'sine';
 
     switch(soundType) {
         case 'Beep_High': freq1 = 880; break; // A5
         case 'Beep_Low': freq1 = 440; break; // A4
         case 'Double_Beep': freq1 = 660; freq2 = 880; break; // E5 -> A5
         case 'Success': freq1 = 523.25; freq2 = 783.99; durationMs = 300; break; // C5 -> G5
-        case 'Error': freq1 = 300; oscillator.type = 'sawtooth'; break; // Low G# approx
+        case 'Error': freq1 = 300; oscType = 'sawtooth'; break; // Low G# approx
         default: freq1 = 880; break;
     }
 
@@ -116,7 +164,7 @@ window.playJsSound = function(soundType = 'Beep_High', durationMs = 150) {
     gainNode.gain.linearRampToValueAtTime(0, now + durationSec); // Fade out
 
     oscillator.frequency.setValueAtTime(freq1, now);
-    oscillator.type = (oscillator.type === 'sawtooth') ? 'sawtooth' : 'sine';
+    oscillator.type = oscType;
     oscillator.start(now);
     oscillator.stop(now + durationSec);
 
@@ -161,7 +209,31 @@ selected_workout_duration, selected_rest_duration = render_sidebar_controls()
 if not workout_session.is_running():
     workout_session.update_durations(selected_workout_duration, selected_rest_duration)
 
-render_main_display(workout_session)
+# --- AI Feedback State ---
+if 'ai_feedback' not in st.session_state:
+    st.session_state.ai_feedback = None # Will store the generated feedback text
+if 'ai_feedback_triggered' not in st.session_state:
+    st.session_state.ai_feedback_triggered = False # Flag to generate feedback only once per pause
+
+# --- AI Feedback Trigger Function ---
+def trigger_ai_feedback():
+    """
+    Called when the pause button is clicked. Sets a flag
+    to generate feedback on the next rerun.
+    """
+    st.session_state.ai_feedback_triggered = True
+    st.session_state.ai_feedback = "🧠 Generating feedback..." # Show immediate placeholder
+
+# --- Main Display Rendering ---
+render_main_display(workout_session, trigger_ai_feedback) # Pass the trigger
+
+# --- Generate AI Feedback (if flagged and paused) ---
+if st.session_state.ai_feedback_triggered and workout_session.is_paused():
+    st.session_state.ai_feedback_triggered = False # Reset flag
+    with st.spinner("🤖 Getting AI feedback..."):
+         st.session_state.ai_feedback = get_ai_feedback_for_session(workout_session)
+    st.rerun() # Rerun one last time to display the *actual* feedback
+
 
 # --- JavaScript Sound Trigger ---
 sound_info = st.session_state.pop('sound_to_play', None)
@@ -177,6 +249,10 @@ if workout_session.is_running():
     workout_session.tick()
     time.sleep(1)
     st.rerun()
+elif workout_session.is_paused() and st.session_state.ai_feedback is None and not st.session_state.ai_feedback_triggered:
+     # If paused and no feedback requested yet, show initial message
+     st.session_state.ai_feedback = "Pause your workout to receive AI feedback."
+
 
 st.markdown("---")
 st.caption("Built with Streamlit and ❤️ for fitness.")

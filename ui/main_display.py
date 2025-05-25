@@ -11,7 +11,15 @@ import html
 import random
 
 
-def render_main_display(session: WorkoutSession) -> None:
+def render_main_display(session: WorkoutSession, trigger_ai_feedback_callback=None) -> None:
+    """
+    Renders the main timer display and control buttons.
+
+    Args:
+        session (WorkoutSession): The current workout session object.
+        trigger_ai_feedback_callback (callable, optional):
+            The function to call when the pause button is clicked.
+    """
     st.markdown(
         "<h3 style='text-align:center;margin-bottom:10px;'>⏱️ Workout Timer</h3>",
         unsafe_allow_html=True,
@@ -73,7 +81,7 @@ def render_main_display(session: WorkoutSession) -> None:
     if session.is_running_or_paused(): # Show this section if timer is running or paused
         if current_phase == PHASE_PAUSED:
             if 'motivational_message' not in st.session_state or \
-               st.session_state.get('last_phase_for_motivation') != PHASE_PAUSED :
+                st.session_state.get('last_phase_for_motivation') != PHASE_PAUSED :
                 st.session_state.motivational_message = random.choice(MOTIVATIONAL_MESSAGES)
             st.session_state.last_phase_for_motivation = PHASE_PAUSED
             st.markdown(
@@ -134,33 +142,44 @@ def render_main_display(session: WorkoutSession) -> None:
         if session.is_paused():
             if st.button("▶️ Resume", use_container_width=True, key="resume_button"):
                 session.resume_session()
+                st.session_state.ai_feedback = "Pause your workout to receive AI feedback." # Reset on resume
                 st.rerun()
         elif not session.is_running_or_paused(): # Initial state, or after reset
             if st.button("🚀 Start", use_container_width=True, key="start_button"):
+                streamlit_js_eval(js_code="if(typeof window.requestSoundPermissionAndUnlock === 'function') { window.requestSoundPermissionAndUnlock(); } else { console.error('[AUDIO DEBUG] requestSoundPermissionAndUnlock not found.'); }")
                 session.start_session()
-                # Fallback/secondary attempt to unlock audio context
-                streamlit_js_eval(js_code="if(typeof window.unlockAudio === 'function') { window.unlockAudio(); console.log('[AUDIO DEBUG] unlockAudio called from Start button.'); }")
                 st.rerun()
         else: # Running, not paused
-             st.button("🚀 Start", use_container_width=True, key="start_button_disabled", disabled=True)
+            st.button("🚀 Start", use_container_width=True, key="start_button_disabled", disabled=True)
 
 
-    with col2: # Pause Button (replaces old Stop button's position)
+    with col2: # Pause Button
         if session.is_running_or_paused() and not session.is_paused():
-            if st.button("⏸️ Pause", use_container_width=True, key="pause_button"):
+            # Pass the callback function to on_click
+            if st.button("⏸️ Pause", use_container_width=True, key="pause_button", on_click=trigger_ai_feedback_callback):
                 session.pause_session()
+                # Rerun will happen in Home.py after setting the trigger flag
                 st.rerun()
         else: # Not running or already paused
             st.button("⏸️ Pause", use_container_width=True, key="pause_button_disabled", disabled=True)
-            
+
     with col3: # Reset Button
         if st.button("🔄 Reset", use_container_width=True, key="reset_button"):
             session.reset_session_stats()
+            st.session_state.ai_feedback = None # Clear feedback on reset
+            st.session_state.ai_feedback_triggered = False # Reset flag
             st.rerun()
 
     st.markdown("---")
     display_workout_insights(session)
 
     st.markdown("---")
-    st.subheader("🧠 AI Feedback (Future)")
-    st.info("AI‑generated tips or analysis from the RAG pipeline will appear here.")
+    st.subheader("🧠 AI Feedback") # Updated Title
+
+    # Display AI feedback if available, otherwise show the placeholder
+    feedback_message = st.session_state.get("ai_feedback", "Pause your workout to receive AI feedback.")
+    st.info(feedback_message)
+
+    # Check for the no-schedule warning *only when paused*
+    if session.is_paused() and not schedule_exists and "For more targeted feedback" not in feedback_message:
+         st.warning('Add exercises via the "Add Workout" menu for targeted feedback!', icon="💡")

@@ -72,3 +72,5 @@ def initialize_session_state_defaults():
         st.session_state.ai_workout_prompt = ""
     if 'ai_generated_schedule_text' not in st.session_state:
         st.session_state.ai_generated_schedule_text = ""
+
+        
