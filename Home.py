@@ -2,29 +2,34 @@
 import streamlit as st
 import time
 import os
-from streamlit_js_eval import streamlit_js_eval # Import
+from streamlit_js_eval import streamlit_js_eval
 
 # Custom modules
-from configs.app_config import PHASE_PAUSED # Import PHASE_PAUSED
+from configs.app_config import PHASE_PAUSED
 from utils.helpers import initialize_session_state_defaults
-from core.session_manager import WorkoutSession
+from core.session_manager import WorkoutSession # Ensure it uses the fixed version
 from ui.sidebar_controls import render_sidebar_controls
 from ui.main_display import render_main_display
-from ai_components.agent_rag_pipeline import get_ai_feedback_for_session # Import AI feedback function
-# from data_tracking.storage import load_workout_history # Keep for future use
+from ai_components.agent_rag_pipeline import get_ai_feedback_for_session
 
 # --- Page Configuration (should be the first Streamlit command) ---
 st.set_page_config(
-    page_title="Workout Timer - Home", # Updated page title for browser tab
-    page_icon="⏱️",
+    page_title="Workout Timer - Home",
+    page_icon="⏱️", # You can use an actual icon URL here later
     layout="wide",
-    initial_sidebar_state="collapsed" # Changed to "collapsed"
+    initial_sidebar_state="collapsed"
 )
 
-
-# For custom icon in PWA
+# --- PWA Setup: Link Manifest and Service Worker ---
+# Ensure these paths are correct for your deployment.
+# These assume manifest.json and sw.js are served from the root.
 st.markdown(
     '<link rel="manifest" href="/manifest.json">',
+    unsafe_allow_html=True
+)
+# Add theme color for browser UI (esp. mobile)
+st.markdown(
+    '<meta name="theme-color" content="#10ddc2">',
     unsafe_allow_html=True
 )
 st.markdown(
@@ -44,7 +49,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# --- JavaScript Sound Engine Injection (MODIFIED) ---
+
+# --- JavaScript Sound Engine Injection (as provided) ---
 js_sound_script = """
 <script>
 // Make functions and context global for accessibility
@@ -193,66 +199,64 @@ st.markdown(js_sound_script, unsafe_allow_html=True)
 
 # --- Function to Load Custom CSS ---
 def load_css(file_path):
+    # Check relative path first, then absolute. This helps in deployment.
+    if not os.path.exists(file_path):
+        file_path = os.path.join(os.path.dirname(__file__), "ui", "style.css")
+
     if os.path.exists(file_path):
         with open(file_path) as f:
             st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
     else:
         st.warning(f"Custom CSS file not found at {file_path}")
 
-css_file_path = os.path.join(os.path.dirname(__file__), "ui", "style.css")
-load_css(css_file_path)
+load_css("ui/style.css") # Try relative first
 
+# --- App Initialization ---
 initialize_session_state_defaults()
 workout_session = WorkoutSession()
 selected_workout_duration, selected_rest_duration = render_sidebar_controls()
 
-if not workout_session.is_running():
+if not workout_session.is_running_or_paused(): # Update only if not running/paused
     workout_session.update_durations(selected_workout_duration, selected_rest_duration)
 
 # --- AI Feedback State ---
 if 'ai_feedback' not in st.session_state:
-    st.session_state.ai_feedback = None # Will store the generated feedback text
+    st.session_state.ai_feedback = None
 if 'ai_feedback_triggered' not in st.session_state:
-    st.session_state.ai_feedback_triggered = False # Flag to generate feedback only once per pause
+    st.session_state.ai_feedback_triggered = False
 
 # --- AI Feedback Trigger Function ---
 def trigger_ai_feedback():
-    """
-    Called when the pause button is clicked. Sets a flag
-    to generate feedback on the next rerun.
-    """
     st.session_state.ai_feedback_triggered = True
-    st.session_state.ai_feedback = "🧠 Generating feedback..." # Show immediate placeholder
+    st.session_state.ai_feedback = "🧠 Generating feedback..."
 
 # --- Main Display Rendering ---
-render_main_display(workout_session, trigger_ai_feedback) # Pass the trigger
+render_main_display(workout_session, trigger_ai_feedback)
 
 # --- Generate AI Feedback (if flagged and paused) ---
 if st.session_state.ai_feedback_triggered and workout_session.is_paused():
     st.session_state.ai_feedback_triggered = False # Reset flag
     with st.spinner("🤖 Getting AI feedback..."):
          st.session_state.ai_feedback = get_ai_feedback_for_session(workout_session)
-    st.rerun() # Rerun one last time to display the *actual* feedback
-
+    st.rerun()
 
 # --- JavaScript Sound Trigger ---
 sound_info = st.session_state.pop('sound_to_play', None)
 if sound_info:
     sound_name = sound_info.get("name")
     if sound_name and sound_name != "None":
-        print(f"Triggering JS Sound: {sound_name}") # For debugging
+        print(f"Triggering JS Sound: {sound_name}")
         streamlit_js_eval(js_code=f"window.playJsSound('{sound_name}');")
 
 
 # --- Timer Tick and Rerun ---
 if workout_session.is_running():
     workout_session.tick()
-    time.sleep(1)
+    time.sleep(1) # Use time.sleep(1) for a 1-second interval
     st.rerun()
 elif workout_session.is_paused() and st.session_state.ai_feedback is None and not st.session_state.ai_feedback_triggered:
-     # If paused and no feedback requested yet, show initial message
      st.session_state.ai_feedback = "Pause your workout to receive AI feedback."
 
-
+# --- Footer ---
 st.markdown("---")
 st.caption("Built with Streamlit and ❤️ for fitness.")

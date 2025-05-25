@@ -1,20 +1,25 @@
 {
   "short_name": "WorkoutApp",
   "name": "Streamlit Workout Timer App",
+  "description": "An interval workout timer PWA built with Streamlit.",
   "icons": [
     {
-      "src": "icons/icon-192x192.png",
+      "src": "/assets/icons/icon-192x192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
-      "src": "icons/icon-512x512.png",
+      "src": "/assets/icons/icon-512x512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
   "start_url": ".",
+  "scope": "/",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "theme_color": "#10ddc2",
   "background_color": "#2F3C4F"
 }

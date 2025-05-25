@@ -8,7 +8,9 @@ from configs.app_config import (
     GET_READY_DURATION,
 )
 from utils.helpers import format_time
-from streamlit_push_notifications import send_push # ▶ NEW ◀
+# --- CHANGED IMPORT PATH ---
+from utils.streamlit_push_notifications import send_push
+# ---------------------------
 
 
 # ----------------------------------------------------------------------
@@ -69,7 +71,7 @@ def _play_sound_js(sound_name_or_id: str | None) -> None:
     ) + 1
 
 # ----------------------------------------------------------------------
-# Workout-timer state machine (unchanged apart from sound helper)
+# Workout-timer state machine (with corrected index logic)
 # ----------------------------------------------------------------------
 class WorkoutSession:
     def __init__(self):
@@ -192,15 +194,12 @@ class WorkoutSession:
             st.session_state.current_time = st.session_state.rest_duration
             st.session_state.completed_rounds += 1
             _play_sound_js(st.session_state.get("sound_on_rest_start"))
-            # <<< CHANGE: Index increment is REMOVED from here >>>
+            # Index increment removed from here
 
         elif previous_phase == PHASE_REST:
-            # <<< CHANGE: Index increment is ADDED here >>>
+            # Index increment added here
             schedule = st.session_state.get("workout_schedule", [])
             if schedule:
-                # Only increment if we are *not* on the very last exercise AND
-                # about to loop. However, the modulo handles looping.
-                # We need to increment *before* starting the next workout.
                 current_idx = st.session_state.get("current_exercise_index", 0)
                 st.session_state.current_exercise_index = (current_idx + 1) % len(
                     schedule
@@ -263,7 +262,6 @@ class WorkoutSession:
             if phase == PHASE_GET_READY
             else 1
         )
-
         # Handle division by zero or negative total gracefully
         if total <= 0:
             return 0.0
